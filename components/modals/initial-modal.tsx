@@ -26,16 +26,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
+import Select, { MultiValue } from 'react-select';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Server name is required." }),
   imageUrl: z.string().min(1, { message: "Server image is required." }),
-  category: z.string().min(1, { message: "Server category is required." })
+  category: z.array(z.number()).min(1, { message: "At least one category is required." })
 });
 
 export function InitialModal() {
   const [isMounted, setIsMounted] = useState(false);
-
   const router = useRouter();
 
   const form = useForm({
@@ -43,9 +43,25 @@ export function InitialModal() {
     defaultValues: {
       name: "",
       imageUrl: "",
-      category: ""
+      category: [] 
     }
   });
+
+  // TODO: Have to fetch this from DB and then show also fix the z forms
+  interface CategoryOption {
+    value: number;
+    label: string;
+  }
+
+  const categoryOptions = [
+    { id: 1, type: "Gaming" },
+    { id: 2, type: "Coding" }
+  ];
+
+  const options: CategoryOption[] = categoryOptions.map(category => ({
+    value: category.id,
+    label: category.type
+  }));
 
   const isLoading = form.formState.isSubmitting;
 
@@ -83,6 +99,7 @@ export function InitialModal() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
               <div className="flex items-center justify-center text-center">
+                {/* File upload for server image */}
                 <FormField
                   control={form.control}
                   name="imageUrl"
@@ -99,6 +116,8 @@ export function InitialModal() {
                   )}
                 />
               </div>
+
+              {/* Server name input */}
               <FormField
                 control={form.control}
                 name="name"
@@ -120,8 +139,9 @@ export function InitialModal() {
                 )}
               />
 
+              {/* Category multi-select */}
+              {/* TODO: have to check  */ }
               <FormField
-                // TODO: Make good component for this
                 control={form.control}
                 name="category"
                 render={({ field }) => (
@@ -130,11 +150,23 @@ export function InitialModal() {
                       Category
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        disabled={isLoading}
-                        placeholder="Enter Category"
-                        className="bg-zinc-300/50 border-0 focus-visible: ring-0 text-black focus-visible:ring-offset-0"
-                        {...field}
+                      <Select
+                        isMulti
+                        options={options}
+                        isDisabled={isLoading}
+                        placeholder="Select Categories"
+                        className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
+                        
+                        // Handle multi-select change
+                        onChange={(selectedOptions: MultiValue<CategoryOption>) => {
+                          const selectedIds = selectedOptions.map(option => option.value);
+                          field.onChange(selectedIds);
+                        }}
+
+                        // Ensure value is an array of category objects
+                        value={options.filter(option =>
+                          Array.isArray(field.value) && (field.value as number[]).includes(option.value)
+                        )}
                       />
                     </FormControl>
                     <FormMessage />

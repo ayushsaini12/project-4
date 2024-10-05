@@ -19,12 +19,22 @@ datasource db {
 // }
 
 model CategoryTypeServer {
-  id   Int    @id
+  id   Int    @id @default(autoincrement()) // Use autoincrement for unique ID
   name String
 
-  servers Server[]
+  createdAt          DateTime             @default(now())
+  JoinCategoryServer JoinCategoryServer[]
+}
 
-  createdAt DateTime @default(now())
+model JoinCategoryServer {
+  serverId String
+  Server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  categoryId         Int
+  CategoryTypeServer CategoryTypeServer @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, categoryId]) // Composite primary key
+  @@index([categoryId]) // Index on categoryId for faster lookups
 }
 
 model Profile {
@@ -48,7 +58,7 @@ model Profile {
 }
 
 model Server {
-  id         String @id @default(uuid())
+  id         String @id @default(uuid()) // Use UUID as primary key for Server
   name       String
   imageUrl   String @db.Text
   inviteCode String @unique
@@ -56,17 +66,14 @@ model Server {
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  categoryId         Int
-  categoryTypeServer CategoryTypeServer @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
   members  Member[]
   channels Channel[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  JoinCategoryServer JoinCategoryServer[]
 
-  @@index([profileId])
-  @@index([categoryId])
+  @@index([profileId]) // Index for profileId for faster lookups
 }
 
 enum MemberRole {
