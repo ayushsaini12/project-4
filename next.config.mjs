@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["uploadthing.com", "utfs.io"], // Add utfs.io here
+    domains: ["uploadthing.com", "utfs.io"], 
     remotePatterns: [
       {
         protocol: "https",
