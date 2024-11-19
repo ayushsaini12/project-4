@@ -28,6 +28,12 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import Select, { MultiValue } from 'react-select';
 
+interface Category {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
 const formSchema = z.object({
   name: z.string().min(1, { message: "Server name is required." }),
   imageUrl: z.string().min(1, { message: "Server image is required." }),
@@ -36,6 +42,7 @@ const formSchema = z.object({
 
 export function InitialModal() {
   const [isMounted, setIsMounted] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const router = useRouter();
 
   const form = useForm({
@@ -43,45 +50,48 @@ export function InitialModal() {
     defaultValues: {
       name: "",
       imageUrl: "",
-      category: [] 
+      category: []
     }
   });
 
-  // TODO: Have to fetch this from DB and then show also fix the z forms
-  interface CategoryOption {
-    value: number;
-    label: string;
-  }
-
-  const categoryOptions = [
-    { id: 1, type: "Gaming" },
-    { id: 2, type: "Coding" }
-  ];
-
-  const options: CategoryOption[] = categoryOptions.map(category => ({
-    value: category.id,
-    label: category.type
-  }));
-
   const isLoading = form.formState.isSubmitting;
+
+  useEffect(() => {
+    setIsMounted(true);
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get<Category[]>("http://localhost:3000/api/category");
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.post("/api/server", values);
-
+      const payload = {
+        name: values.name,
+        imageUrl: values.imageUrl,
+        categoryIds: values.category, // Ensure correct key matches API expectation
+      };
+  
+      await axios.post("/api/servers", payload);
       form.reset();
       router.refresh();
       window.location.reload();
     } catch (error) {
-      console.error(error);
+      console.error("Error while submitting server:", error);
     }
   };
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   if (!isMounted) return null;
+
+  const categoryOptions = categories.map(category => ({
+    value: category.id,
+    label: category.name
+  }));
 
   return (
     <Dialog open>
@@ -99,7 +109,6 @@ export function InitialModal() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-8 px-6">
               <div className="flex items-center justify-center text-center">
-                {/* File upload for server image */}
                 <FormField
                   control={form.control}
                   name="imageUrl"
@@ -117,7 +126,6 @@ export function InitialModal() {
                 />
               </div>
 
-              {/* Server name input */}
               <FormField
                 control={form.control}
                 name="name"
@@ -130,7 +138,7 @@ export function InitialModal() {
                       <Input
                         disabled={isLoading}
                         placeholder="Enter server name"
-                        className="bg-zinc-300/50 border-0 focus-visible: ring-0 text-black focus-visible:ring-offset-0"
+                        className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
                         {...field}
                       />
                     </FormControl>
@@ -139,8 +147,6 @@ export function InitialModal() {
                 )}
               />
 
-              {/* Category multi-select */}
-              {/* TODO: have to check  */ }
               <FormField
                 control={form.control}
                 name="category"
@@ -150,30 +156,24 @@ export function InitialModal() {
                       Category
                     </FormLabel>
                     <FormControl>
-                      <Select
-                        isMulti
-                        options={options}
-                        isDisabled={isLoading}
-                        placeholder="Select Categories"
-                        className="bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0"
-                        
-                        // Handle multi-select change
-                        onChange={(selectedOptions: MultiValue<CategoryOption>) => {
-                          const selectedIds = selectedOptions.map(option => option.value);
-                          field.onChange(selectedIds);
-                        }}
-
-                        // Ensure value is an array of category objects
-                        value={options.filter(option =>
-                          Array.isArray(field.value) && (field.value as number[]).includes(option.value)
-                        )}
-                      />
+                    <Select
+                      isMulti
+                      options={categoryOptions}
+                      isDisabled={isLoading}
+                      placeholder="Select Categories"
+                      onChange={(selectedOptions: MultiValue<{ value: number; label: string }>) => {
+                        const selectedIds = selectedOptions.map(option => option.value);
+                        field.onChange(selectedIds);
+                      }}
+                      value={categoryOptions.filter(option =>
+                        Array.isArray(field.value) && (field.value as number[]).includes(option.value)
+                      )}
+                    />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
             </div>
             <DialogFooter className="bg-gray-100 px-6 py-4">
               <Button disabled={isLoading} variant="secondary">
