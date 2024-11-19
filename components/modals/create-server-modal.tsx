@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,13 +27,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { useModal } from "@/hooks/use-modal-store";
+import Select, { MultiValue } from 'react-select';
+
+interface Category {
+  id: number;
+  name: string;
+  createdAt: string;
+}
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Server name is required." }),
-  imageUrl: z.string().min(1, { message: "Server image is required." })
+  imageUrl: z.string().min(1, { message: "Server image is required." }),
+  category: z.array(z.number()).min(1, { message: "At least one category is required." })
 });
 
 export function CreateServerModal() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { isOpen, onClose, type } = useModal();
   const router = useRouter();
 
@@ -43,15 +53,34 @@ export function CreateServerModal() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      imageUrl: ""
+      imageUrl: "",
+      category: []
     }
   });
 
   const isLoading = form.formState.isSubmitting;
 
+  useEffect(() => {
+    setIsMounted(true);
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get<Category[]>("http://localhost:3000/api/category");
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.post("/api/servers", values);
+      const payload = {
+        name: values.name,
+        imageUrl: values.imageUrl,
+        categoryIds: values.category, // Ensure correct key matches API expectation
+      };
+      await axios.post("/api/servers", payload);
 
       form.reset();
       router.refresh();
@@ -60,6 +89,13 @@ export function CreateServerModal() {
       console.error(error);
     }
   };
+
+  if (!isMounted) return null;
+
+  const categoryOptions = categories.map(category => ({
+    value: category.id,
+    label: category.name
+  }));
 
   const handleClose = () => {
     form.reset();
@@ -113,6 +149,34 @@ export function CreateServerModal() {
                         className="bg-zinc-300/50 border-0 focus-visible: ring-0 text-black focus-visible:ring-offset-0"
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="uppercase text-xs font-bold text-zinc-500 dark:text-secondary/70">
+                      Category
+                    </FormLabel>
+                    <FormControl>
+                    <Select
+                      isMulti
+                      options={categoryOptions}
+                      isDisabled={isLoading}
+                      placeholder="Select Categories"
+                      onChange={(selectedOptions: MultiValue<{ value: number; label: string }>) => {
+                        const selectedIds = selectedOptions.map(option => option.value);
+                        field.onChange(selectedIds);
+                      }}
+                      value={categoryOptions.filter(option =>
+                        Array.isArray(field.value) && (field.value as number[]).includes(option.value)
+                      )}
+                    />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
