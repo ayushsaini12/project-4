@@ -13,10 +13,11 @@ export const config = {
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
   if (!res.socket.server.io) {
     const path = "/api/socket/io";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const httpServer: NetServer = res.socket.server as any;
     const io = new ServerIO(httpServer, {
       path,
-      // @ts-ignore
+      // @ts-expect-error
       addTrailingSlash: false
     });
     res.socket.server.io = io;
