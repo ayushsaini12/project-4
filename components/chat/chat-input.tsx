@@ -21,7 +21,7 @@ import { EmojiPicker } from "@/components/emoji-picker";
 
 interface ChatInputProps {
   apiUrl: string;
-  query: Record<string, any>;
+  query: Record<string, string | number | boolean>;
   name: string;
   type: "conversation" | "channel";
 }

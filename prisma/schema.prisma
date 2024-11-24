@@ -65,6 +65,7 @@ model Server {
 
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  rating    Int     @default(4)
 
   members  Member[]
   channels Channel[]
