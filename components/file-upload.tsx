@@ -61,6 +61,7 @@ export function FileUpload({
   return (
     <UploadDropzone
       endpoint={endpoint}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onClientUploadComplete={(res:any) => {
         onChange(res?.[0].url);
       }}
